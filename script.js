@@ -1,0 +1,345 @@
+// Global configuration and data arrays
+let STUDENT_FEE_PER_MONTH = 500;
+const PLAN_DURATION_DAYS = 30;
+let TOTAL_SEATS = 50;
+let students = [];
+let payments = [];
+
+// DOM Elements
+const allSections = document.querySelectorAll('main > section');
+const navButtons = document.querySelectorAll('nav button');
+const totalStudentsCard = document.getElementById('total-students-card');
+const studentForm = document.getElementById('student-form');
+const studentIdInput = document.getElementById('student-id');
+const studentNameInput = document.getElementById('student-name');
+const joinDateInput = document.getElementById('join-date');
+const allottedSeatInput = document.getElementById('allotted-seat');
+const isVipInput = document.getElementById('is-vip');
+const studentsTableBody = document.querySelector('#students-table tbody');
+const feeStudentSelect = document.getElementById('fee-student-select');
+const selectedStudentFeesInfo = document.getElementById('selected-student-fees-info');
+const feePaymentForm = document.getElementById('fee-payment-form');
+const feePaymentCard = document.getElementById('fee-payment-card');
+const paymentMonthInput = document.getElementById('payment-month');
+const paymentYearInput = document.getElementById('payment-year');
+const amountPaidInput = document.getElementById('amount-paid');
+const paymentDateInput = document.getElementById('payment-date');
+const paymentModeInput = document.getElementById('payment-mode');
+const attendedMonthInput = document.getElementById('attended-month');
+const seatLayoutDiv = document.getElementById('seat-layout');
+const reportMonthInput = document.getElementById('report-month');
+const reportYearInput = document.getElementById('report-year');
+const monthlyReportOutputDiv = document.getElementById('monthly-report-output');
+const defaultMonthlyFeeInput = document.getElementById('default-monthly-fee');
+const totalStudySeatsInput = document.getElementById('total-study-seats');
+const importDataFile = document.getElementById('import-data-file');
+const seatModal = document.getElementById('seat-allotment-modal');
+const modalSeatNumber = document.getElementById('modal-seat-number');
+const modalStudentSelect = document.getElementById('modal-student-select');
+
+// --- Utility Functions ---
+const formatDate = (date) => new Date(date).toISOString().split('T')[0];
+const getMonthName = (monthNum) => new Date(2000, monthNum - 1, 1).toLocaleString('en-us', { month: 'long' });
+
+// --- Data Persistence ---
+const saveData = () => {
+    localStorage.setItem('students', JSON.stringify(students));
+    localStorage.setItem('payments', JSON.stringify(payments));
+    localStorage.setItem('STUDENT_FEE_PER_MONTH', JSON.stringify(STUDENT_FEE_PER_MONTH));
+    localStorage.setItem('TOTAL_SEATS', JSON.stringify(TOTAL_SEATS));
+};
+const loadData = () => {
+    students = JSON.parse(localStorage.getItem('students')) || [];
+    payments = JSON.parse(localStorage.getItem('payments')) || [];
+    STUDENT_FEE_PER_MONTH = JSON.parse(localStorage.getItem('STUDENT_FEE_PER_MONTH')) || 500;
+    TOTAL_SEATS = JSON.parse(localStorage.getItem('TOTAL_SEATS')) || 50;
+};
+
+// --- Core App Logic (Updated Navigation) ---
+function showSection(sectionId) {
+    // Highlight active nav button
+    navButtons.forEach(btn => {
+        btn.classList.toggle('nav-active', btn.getAttribute('onclick').includes(sectionId));
+    });
+
+    allSections.forEach(s => s.classList.remove('active'));
+    document.getElementById(sectionId).classList.add('active');
+    
+    const today = new Date();
+    switch (sectionId) {
+        case 'dashboard-section': updateDashboardStats(); break;
+        case 'student-management-section': renderStudentsTable(); break;
+        case 'fees-management-section':
+            populateFeeStudentSelect();
+            selectedStudentFeesInfo.style.display = 'none';
+            feePaymentCard.style.display = 'none';
+            paymentMonthInput.value = today.getMonth() + 1;
+            paymentYearInput.value = today.getFullYear();
+            paymentDateInput.value = formatDate(today);
+            break;
+        case 'seat-management-section': renderSeatLayout(); break;
+        case 'reports-section':
+            reportMonthInput.value = today.getMonth() + 1;
+            reportYearInput.value = today.getFullYear();
+            monthlyReportOutputDiv.style.display = 'none';
+            break;
+        case 'settings-section': loadSettings(); break;
+    }
+}
+
+function updateDashboardStats() {
+    document.getElementById('total-students').textContent = students.length;
+    const occupiedSeats = students.filter(s => s.seat).length;
+    document.getElementById('occupied-seats').textContent = occupiedSeats;
+    document.getElementById('available-seats').textContent = TOTAL_SEATS - occupiedSeats;
+    const currentMonth = new Date().getMonth() + 1;
+    const collectedFees = payments
+        .filter(p => p.month === currentMonth && p.year === new Date().getFullYear() && p.attended)
+        .reduce((sum, p) => sum + p.amount, 0);
+    document.getElementById('this-month-collected-fees').textContent = `₹ ${collectedFees}`;
+}
+
+// --- Student Management ---
+studentForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const studentId = studentIdInput.value;
+    const studentData = {
+        name: studentNameInput.value.trim(),
+        joinDate: joinDateInput.value,
+        seat: parseInt(allottedSeatInput.value) || null,
+        isVip: isVipInput.checked
+    };
+    if (studentId) {
+        const student = students.find(s => s.id === studentId);
+        Object.assign(student, studentData);
+    } else {
+        students.push({ id: 'S' + Date.now(), ...studentData, planExpiryDate: formatDate(new Date(new Date(studentData.joinDate).setDate(new Date(studentData.joinDate).getDate() + PLAN_DURATION_DAYS))) });
+    }
+    saveData();
+    renderStudentsTable();
+    studentForm.reset();
+    studentIdInput.value = '';
+    alert('Student saved!');
+});
+
+function renderStudentsTable() {
+    studentsTableBody.innerHTML = '';
+    students.forEach(s => {
+        const row = studentsTableBody.insertRow();
+        row.innerHTML = `
+            <td><span class="student-name">${s.name}</span></td>
+            <td>${s.joinDate}</td>
+            <td>${s.isVip ? `<i class="fas fa-crown icon"></i>VIP` : (s.planExpiryDate || 'N/A')}</td>
+            <td>${s.seat ? `<i class="fas fa-chair icon"></i>${s.seat}` : 'N/A'}</td>
+            <td>${s.isVip ? 'Yes' : 'No'}</td>
+            <td class="action-buttons">
+                <button onclick="editStudent('${s.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                <button onclick="deleteStudent('${s.id}')" title="Delete"><i class="fas fa-trash-alt"></i></button>
+            </td>
+        `;
+    });
+}
+
+function editStudent(id) {
+    const student = students.find(s => s.id === id);
+    if (student) {
+        studentIdInput.value = student.id;
+        studentNameInput.value = student.name;
+        joinDateInput.value = student.joinDate;
+        allottedSeatInput.value = student.seat;
+        isVipInput.checked = student.isVip;
+        showSection('student-management-section');
+    }
+}
+
+function deleteStudent(id) {
+    if (confirm('Delete this student and all their records?')) {
+        students = students.filter(s => s.id !== id);
+        payments = payments.filter(p => p.studentId !== id);
+        saveData();
+        renderStudentsTable();
+        renderSeatLayout();
+    }
+}
+
+// --- Fees Management ---
+feeStudentSelect.addEventListener('change', (e) => {
+    const studentId = e.target.value;
+    if (studentId) {
+        feePaymentCard.style.display = 'block';
+        selectedStudentFeesInfo.style.display = 'block';
+        displayStudentFees(studentId);
+    } else {
+        feePaymentCard.style.display = 'none';
+        selectedStudentFeesInfo.style.display = 'none';
+    }
+});
+
+function populateFeeStudentSelect() {
+    feeStudentSelect.innerHTML = '<option value="">-- Select a student --</option>';
+    students.forEach(s => feeStudentSelect.innerHTML += `<option value="${s.id}">${s.name} (Seat: ${s.seat || 'N/A'})</option>`);
+}
+
+function displayStudentFees(studentId) {
+    if (!studentId) { selectedStudentFeesInfo.innerHTML = ''; return; }
+    const student = students.find(s => s.id === studentId);
+    let infoHtml = `<h3><i class="fas fa-user-circle"></i>Status for ${student.name}</h3>`;
+    if (student.isVip) { infoHtml += `<p>This is a VIP member.</p>`; feePaymentForm.style.display = 'none'; }
+    
+    let tableHtml = `<div class="table-responsive"><table id="monthly-status-table"><thead><tr><th>Month</th><th>Status</th><th>Amount</th><th>Date</th></tr></thead><tbody>`;
+    const joinDate = new Date(student.joinDate);
+    const today = new Date();
+    for (let y = joinDate.getFullYear(); y <= today.getFullYear(); y++) {
+        for (let m = 1; m <= 12; m++) {
+            if (new Date(y, m-1) < new Date(joinDate.getFullYear(), joinDate.getMonth())) continue;
+            if (new Date(y, m-1) > today) break;
+            
+            const payment = payments.find(p => p.studentId === studentId && p.month === m && p.year === y);
+            let status, icon, text, amount, date;
+            if (payment) {
+                if (payment.attended) { [status, icon, text, amount, date] = ['paid', 'check-circle', 'Paid', payment.amount, payment.paymentDate]; } 
+                else { [status, icon, text, amount, date] = ['absent', 'user-slash', 'Absent', 0, 'N/A']; }
+            } else { [status, icon, text, amount, date] = ['pending', 'clock', 'Pending', STUDENT_FEE_PER_MONTH, 'N/A']; }
+            tableHtml += `<tr class="status-${status}">
+                <td>${getMonthName(m)} ${y}</td>
+                <td><i class="fas fa-${icon} status-icon"></i>${text}</td>
+                <td>₹ ${amount}</td><td>${date}</td></tr>`;
+        }
+    }
+    selectedStudentFeesInfo.innerHTML = infoHtml + tableHtml + '</tbody></table></div>';
+}
+
+feePaymentForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const studentId = feeStudentSelect.value;
+    const paymentData = { studentId, month: parseInt(paymentMonthInput.value), year: parseInt(paymentYearInput.value), amount: parseFloat(amountPaidInput.value), attended: attendedMonthInput.checked, paymentMode: paymentModeInput.value, paymentDate: paymentDateInput.value };
+    const pIndex = payments.findIndex(p => p.studentId === paymentData.studentId && p.month === paymentData.month && p.year === paymentData.year);
+    if (pIndex > -1) payments[pIndex] = paymentData; else payments.push(paymentData);
+    saveData();
+    displayStudentFees(studentId);
+});
+
+function generateFeeReceipt() {
+    const studentId = feeStudentSelect.value;
+    if (!studentId) { alert('Please select a student.'); return; }
+    const student = students.find(s => s.id === studentId);
+    const receipt = `--- Fee Receipt ---\nDate: ${paymentDateInput.value}\nStudent: ${student.name}\nFor: ${getMonthName(paymentMonthInput.value)} ${paymentYearInput.value}\nAmount: ₹ ${amountPaidInput.value}\nMode: ${paymentModeInput.value}\n--- Thank You ---`;
+    alert(receipt);
+}
+
+// --- Seat Management ---
+function renderSeatLayout() {
+    seatLayoutDiv.innerHTML = '';
+    for (let i = 1; i <= TOTAL_SEATS; i++) {
+        const seatDiv = document.createElement('div');
+        seatDiv.className = 'seat';
+        const studentOnSeat = students.find(s => s.seat === i);
+        if (studentOnSeat) {
+            seatDiv.classList.add('occupied');
+            seatDiv.innerHTML = `<span>Seat ${i}</span><span class="student-name-on-seat">${studentOnSeat.name}</span>`;
+        } else {
+            seatDiv.textContent = `Seat ${i}`;
+            seatDiv.title = `Click to allot Seat ${i}`;
+            seatDiv.onclick = () => openSeatModal(i);
+        }
+        seatLayoutDiv.appendChild(seatDiv);
+    }
+}
+
+function openSeatModal(seatNumber) {
+    modalSeatNumber.textContent = seatNumber;
+    modalStudentSelect.innerHTML = '<option value="">-- Select --</option>';
+    students.filter(s => !s.seat).forEach(s => modalStudentSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`);
+    seatModal.style.display = 'flex';
+}
+
+function closeSeatModal() { seatModal.style.display = 'none'; }
+
+function confirmSeatAllotment() {
+    const studentId = modalStudentSelect.value;
+    const seatNumber = parseInt(modalSeatNumber.textContent);
+    if (!studentId) { alert('Please select a student.'); return; }
+    const student = students.find(s => s.id === studentId);
+    student.seat = seatNumber;
+    saveData();
+    closeSeatModal();
+    renderSeatLayout();
+    renderStudentsTable();
+}
+
+// --- Reports ---
+function generateMonthlyReport() {
+    const month = parseInt(reportMonthInput.value);
+    const year = parseInt(reportYearInput.value);
+    const reportMonthEnd = new Date(year, month, 0);
+    
+    let collectedHtml = `<h4>Collected</h4><div class="table-responsive"><table class="report-table"><thead><tr><th>Name</th><th>Seat</th><th>Amount</th><th>Date</th></tr></thead><tbody>`;
+    let pendingHtml = `<h4>Pending</h4><div class="table-responsive"><table class="report-table"><thead><tr><th>Name</th><th>Seat</th><th>Amount</th></tr></thead><tbody>`;
+    
+    let collectedCount = 0, pendingCount = 0;
+
+    students.forEach(s => {
+        const joinDate = new Date(s.joinDate);
+        if (s.isVip || joinDate > reportMonthEnd) return;
+
+        const payment = payments.find(p => p.studentId === s.id && p.month === month && p.year === year);
+        if (payment && payment.attended) {
+            collectedHtml += `<tr><td>${s.name}</td><td>${s.seat || 'N/A'}</td><td>₹ ${payment.amount}</td><td>${payment.paymentDate}</td></tr>`;
+            collectedCount++;
+        } else if (!payment) {
+            pendingHtml += `<tr><td>${s.name}</td><td>${s.seat || 'N/A'}</td><td>₹ ${STUDENT_FEE_PER_MONTH}</td></tr>`;
+            pendingCount++;
+        }
+    });
+
+    if (collectedCount === 0) collectedHtml += '<tr><td colspan="4">No records found.</td></tr>';
+    if (pendingCount === 0) pendingHtml += '<tr><td colspan="3">No records found.</td></tr>';
+    
+    monthlyReportOutputDiv.innerHTML = `<h3>Report for ${getMonthName(month)} ${year}</h3>` + collectedHtml + '</tbody></table></div>' + pendingHtml + '</tbody></table></div>';
+    monthlyReportOutputDiv.style.display = 'block';
+}
+
+// --- Settings ---
+function loadSettings() {
+    defaultMonthlyFeeInput.value = STUDENT_FEE_PER_MONTH;
+    totalStudySeatsInput.value = TOTAL_SEATS;
+}
+function saveSettings() {
+    STUDENT_FEE_PER_MONTH = parseInt(defaultMonthlyFeeInput.value) || 500;
+    TOTAL_SEATS = parseInt(totalStudySeatsInput.value) || 50;
+    saveData();
+    alert('Settings saved!');
+}
+
+// --- Data Import/Export ---
+function exportData() {
+    const dataStr = JSON.stringify({ students, payments, STUDENT_FEE_PER_MONTH, TOTAL_SEATS }, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `studypoint_backup_${formatDate(new Date())}.json`;
+    a.click();
+}
+importDataFile.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file && confirm('This will overwrite all existing data. Continue?')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const data = JSON.parse(event.target.result);
+            localStorage.setItem('students', JSON.stringify(data.students || []));
+            localStorage.setItem('payments', JSON.stringify(data.payments || []));
+            localStorage.setItem('STUDENT_FEE_PER_MONTH', JSON.stringify(data.STUDENT_FEE_PER_MONTH || 500));
+            localStorage.setItem('TOTAL_SEATS', JSON.stringify(data.TOTAL_SEATS || 50));
+            alert('Import successful! Reloading...');
+            location.reload();
+        };
+        reader.readAsText(file);
+    }
+});
+
+// --- Initializer ---
+document.addEventListener('DOMContentLoaded', () => {
+    loadData();
+    showSection('dashboard-section');
+    totalStudentsCard.addEventListener('click', () => showSection('student-management-section'));
+});
