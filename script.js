@@ -331,9 +331,16 @@ function renderSeatLayout() {
         seatDiv.className = 'seat';
         const studentOnSeat = students.find(s => s.seat === seatNumber);
         
-        if (studentOnSeat) {
-            seatDiv.classList.add('occupied');
-            seatDiv.innerHTML = `<span>${seatNumber}</span><span class="student-name-on-seat">${studentOnSeat.name}</span>`;
+         // नया और अपडेटेड कोड
+if (studentOnSeat) {
+    seatDiv.classList.add('occupied');
+
+    // VIP स्टूडेंट के लिए जाँच करें और नई क्लास जोड़ें
+    if (studentOnSeat.isVip) {
+        seatDiv.classList.add('vip-seat');
+    }
+
+    seatDiv.innerHTML = `<span>${seatNumber}</span><span class="student-name-on-seat">${studentOnSeat.name}</span>`;
         } else {
             seatDiv.textContent = seatNumber;
             seatDiv.title = `Click to allot Seat ${seatNumber}`;
