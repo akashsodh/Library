@@ -324,7 +324,7 @@ function renderSeatLayout() {
         const studentOnSeat = students.find(s => s.seat === i);
         if (studentOnSeat) {
             seatDiv.classList.add('occupied');
-            seatDiv.innerHTML = `<span>Seat ${i}</span><span class="student-name-on-seat">${studentOnSeat.name}</span>`;
+            seatDiv.innerHTML = `<span>Seat ${i}</span><br><span class="student-name-on-seat">${studentOnSeat.name}</span>`;
         } else {
             seatDiv.textContent = `Seat ${i}`;
             seatDiv.title = `Click to allot Seat ${i}`;
