@@ -317,21 +317,83 @@ function generateFeeReceipt() {
 
 // --- Seat Management ---
 function renderSeatLayout() {
-    seatLayoutDiv.innerHTML = '';
-    for (let i = 1; i <= TOTAL_SEATS; i++) {
+    seatLayoutDiv.innerHTML = ''; // पुराने लेआउट को साफ़ करें
+
+    // एक हेल्पर फ़ंक्शन जो एक सीट बनाता है
+    const createSeatElement = (seatNumber) => {
         const seatDiv = document.createElement('div');
         seatDiv.className = 'seat';
-        const studentOnSeat = students.find(s => s.seat === i);
+        const studentOnSeat = students.find(s => s.seat === seatNumber);
+        
         if (studentOnSeat) {
             seatDiv.classList.add('occupied');
-            seatDiv.innerHTML = `<span>Seat ${i}</span><br><span class="student-name-on-seat">${studentOnSeat.name}</span>`;
+            seatDiv.innerHTML = `<span>${seatNumber}</span><span class="student-name-on-seat">${studentOnSeat.name}</span>`;
         } else {
-            seatDiv.textContent = `Seat ${i}`;
-            seatDiv.title = `Click to allot Seat ${i}`;
-            seatDiv.onclick = () => openSeatModal(i);
+            seatDiv.textContent = seatNumber;
+            seatDiv.title = `Click to allot Seat ${seatNumber}`;
+            seatDiv.onclick = () => openSeatModal(seatNumber);
         }
-        seatLayoutDiv.appendChild(seatDiv);
+        return seatDiv;
+    };
+
+    // लेआउट के लिए मुख्य कंटेनर
+    const layoutContainer = document.createElement('div');
+    layoutContainer.className = 'layout-container';
+
+    // 1. टॉप रो (सीटें 9-16)
+    const topRow = document.createElement('div');
+    topRow.className = 'seat-block horizontal';
+    for (let i = 9; i <= 16; i++) {
+        topRow.appendChild(createSeatElement(i));
     }
+
+    // 2. बीच का एरिया (सभी वर्टिकल कॉलम के लिए)
+    const middleArea = document.createElement('div');
+    middleArea.className = 'middle-area';
+
+    // 2a. लेफ्ट कॉलम (सीटें 1-8)
+    const leftCol = document.createElement('div');
+    leftCol.className = 'seat-block vertical';
+    for (let i = 8; i >= 1; i--) { // 8 से 1 तक उल्टा लूप
+        leftCol.appendChild(createSeatElement(i));
+    }
+
+    // 2b. सेंटर के कॉलम (31-34 और 35-40)
+    const centerColsContainer = document.createElement('div');
+    centerColsContainer.className = 'center-columns';
+    
+    const centerTopBlock = document.createElement('div');
+    centerTopBlock.className = 'seat-block vertical';
+    for (let i = 40; i >= 35; i--) { // 40 से 35 तक उल्टा लूप
+        centerTopBlock.appendChild(createSeatElement(i));
+    }
+
+    const centerBottomBlock = document.createElement('div');
+    centerBottomBlock.className = 'seat-block vertical';
+    for (let i = 34; i >= 31; i--) { // 34 से 31 तक उल्टा लूप
+        centerBottomBlock.appendChild(createSeatElement(i));
+    }
+    centerColsContainer.appendChild(centerTopBlock);
+    centerColsContainer.appendChild(centerBottomBlock);
+
+    // 2c. राइट कॉलम (सीटें 17-30)
+    const rightCol = document.createElement('div');
+    rightCol.className = 'seat-block vertical';
+    for (let i = 17; i <= 30; i++) {
+        rightCol.appendChild(createSeatElement(i));
+    }
+
+    // बीच के एरिया में सभी कॉलम जोड़ें
+    middleArea.appendChild(leftCol);
+    middleArea.appendChild(centerColsContainer);
+    middleArea.appendChild(rightCol);
+
+    // मुख्य कंटेनर में टॉप रो और बीच का एरिया जोड़ें
+    layoutContainer.appendChild(topRow);
+    layoutContainer.appendChild(middleArea);
+
+    // अंत में, मुख्य सीट लेआउट डिव में सब कुछ जोड़ें
+    seatLayoutDiv.appendChild(layoutContainer);
 }
 
 function openSeatModal(seatNumber) {

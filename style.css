@@ -118,21 +118,86 @@ table th { font-weight: 600; color: var(--text-light); font-size: 0.9rem; text-t
 #total-students-card { cursor: pointer; }
 
 /* Seat Layout */
-.seat-layout { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 1rem; }
-.seat {
-    background-color: var(--card-bg);
-    color: var(--primary-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    padding: 1rem 0.5rem;
-    text-align: center;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.3s ease;
+/* पुराने seat-layout नियम को हटा दें:
+.seat-layout { 
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 1rem;
 }
-.seat.occupied { background-color: #ADFF2F; color: #E53935; border-color: #E53935; cursor: not-allowed; }
-.seat:not(.occupied):hover { background-color: var(--primary-color); color: #fff; border-color: var(--primary-color); }
-.seat .student-name-on-seat { font-size: 0.8rem; font-weight: 400; margin-top: 5px; }
+*/
+
+/* सीट मैनेजमेंट के लिए नया लेआउट */
+.layout-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem; /* टॉप रो और बाकी के लेआउट के बीच की दूरी */
+    padding: 1rem;
+}
+
+.middle-area {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 800px; /* लेआउट की अधिकतम चौड़ाई */
+}
+
+.seat-block {
+    display: flex;
+    gap: 8px; /* सीटों के बीच की दूरी */
+}
+
+.seat-block.vertical {
+    flex-direction: column;
+}
+
+.seat-block.horizontal {
+    flex-direction: row;
+    flex-wrap: wrap; /* छोटी स्क्रीन के लिए */
+    justify-content: center;
+}
+
+.center-columns {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 17.5rem; /* बीच के दो ब्लॉक्स के बीच की दूरी */
+}
+
+/* व्यक्तिगत सीट की स्टाइलिंग */
+/* नया और अपडेटेड कोड */
+.seat {
+    width: 70px;
+    min-height: 60px; /* ऊंचाई को फ्लेक्सिबल बनाया ताकि नाम फिट हो सके */
+    padding: 5px;
+    font-size: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid var(--primary-color);
+    border-radius: 8px; /* कोनों को हल्का सा गोल करने के लिए */
+    text-align: center; /* टेक्स्ट को सेंटर में रखने के लिए */
+    box-sizing: border-box; /* पैडिंग को सही ढंग से मैनेज करने के लिए */
+}
+
+.seat .student-name-on-seat {
+    font-size: 0.75rem; /* थोड़ा बड़ा फॉन्ट */
+    font-weight: 500;
+    margin-top: 4px;
+    width: 100%; /* पूरी चौड़ाई का उपयोग करें */
+    line-height: 1.2; /* लाइनों के बीच की दूरी */
+    word-wrap: break-word; /* लंबे शब्दों या नामों को अगली लाइन में भेजने के लिए */
+    white-space: normal; /* nowrap को हटाने के लिए ताकि नाम रैप हो सके */
+}
+
+.seat.occupied {
+    background-color: var(--primary-color); /* यह आपके ऐप का मुख्य नीला रंग है */
+    color: #ffffff; /* टेक्स्ट का रंग सफेद ताकि वह नीले पर साफ़ दिखे */
+    border-color: var(--primary-dark); /* बॉर्डर का रंग थोड़ा गहरा नीला */
+    cursor: not-allowed;
+}
 
 /* Modal */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; z-index: 2000; }
@@ -150,4 +215,33 @@ table th { font-weight: 600; color: var(--text-light); font-size: 0.9rem; text-t
     .section-header h2 { font-size: 1.5rem; }
     form, #fee-payment-form { grid-template-columns: 1fr; }
     .btn { padding: 0.8rem 1rem; }
+}
+
+/* Monthly Report सेक्शन के कंट्रोल्स को बड़ा करने के लिए स्टाइल */
+
+.report-controls {
+    display: flex;
+    align-items: center; /* सभी आइटम्स को वर्टिकली सेंटर में रखें */
+    gap: 2rem; /* आइटम्स के बीच की जगह बढ़ाएं */
+    flex-wrap: wrap; /* छोटी स्क्रीन पर आइटम्स को अगली लाइन में भेजें */
+}
+
+/* 'Month:' और 'Year:' लेबल के लिए स्टाइल */
+.report-controls label {
+    font-size: 1.2rem; /* फॉन्ट साइज को बड़ा करें */
+    font-weight: 500;
+}
+
+/* महीने और साल के इनपुट/सेलेक्ट बॉक्स के लिए स्टाइल */
+.report-controls select,
+.report-controls input {
+    font-size: 1.1rem; /* बॉक्स के अंदर के टेक्स्ट का साइज बढ़ाएं */
+    padding: 12px 15px; /* बॉक्स को फिजिकली बड़ा करने के लिए पैडिंग बढ़ाएं */
+    min-width: 150px; /* बॉक्स की न्यूनतम चौड़ाई सेट करें */
+}
+
+/* 'Generate Report' बटन के लिए स्टाइल */
+.report-controls .btn {
+    font-size: 1.1rem; /* बटन का फॉन्ट साइज बढ़ाएं */
+    padding: 12px 20px;
 }
