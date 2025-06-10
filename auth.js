@@ -57,3 +57,16 @@ signupForm.addEventListener('submit', e => {
             errorMessage.textContent = error.message;
         });
 });
+
+// PWA सर्विस वर्कर को रजिस्टर करें
+window.addEventListener('load', () => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then(registration => {
+        console.log('ServiceWorker registration successful:', registration);
+      })
+      .catch(err => {
+        console.log('ServiceWorker registration failed:', err);
+      });
+  }
+});
