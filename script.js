@@ -14,6 +14,12 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+// !! यह लाइन जोड़ें !!
+db.enablePersistence()
+  .catch(err => {
+      console.warn('Firestore persistence error:', err.message);
+  });
+
 let currentUser = null; // To hold the current user object
 
 // Global configuration and data arrays
