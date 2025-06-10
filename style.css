@@ -130,7 +130,7 @@ table th { font-weight: 600; color: var(--text-light); font-size: 0.9rem; text-t
     font-weight: 600;
     transition: all 0.3s ease;
 }
-.seat.occupied { background-color: #FFE5E5; color: #E53935; border-color: #E53935; cursor: not-allowed; }
+.seat.occupied { background-color: #ADFF2F; color: #E53935; border-color: #E53935; cursor: not-allowed; }
 .seat:not(.occupied):hover { background-color: var(--primary-color); color: #fff; border-color: var(--primary-color); }
 .seat .student-name-on-seat { font-size: 0.8rem; font-weight: 400; margin-top: 5px; }
 

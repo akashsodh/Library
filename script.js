@@ -1,3 +1,21 @@
+// ======================================================
+// !! जरूरी: अपनी फायरबेस कॉन्फ़िगरेशन यहाँ भी पेस्ट करें !!
+// ======================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDSQm9bIcS3dM18PjPlmb1ziJ_BcxNe8iE",
+  authDomain: "library0060.firebaseapp.com",
+  projectId: "library0060",
+  storageBucket: "library0060.firebasestorage.app",
+  messagingSenderId: "575895945890",
+  appId: "1:575895945890:web:8adeb76b5e645f36cd8dfb"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+let currentUser = null; // To hold the current user object
+
 // Global configuration and data arrays
 let STUDENT_FEE_PER_MONTH = 500;
 const PLAN_DURATION_DAYS = 30;
@@ -5,8 +23,79 @@ let TOTAL_SEATS = 50;
 let students = [];
 let payments = [];
 
-// DOM Elements
+// --- Firebase Authentication Guard ---
+auth.onAuthStateChanged(user => {
+    if (user) {
+        currentUser = user;
+        // User is logged in, load their data
+        loadData();
+        document.querySelector('body').style.display = 'block'; // Show the app
+    } else {
+        // No user is logged in, redirect to login page
+        window.location.href = 'login.html';
+    }
+});
+
+// --- Data Persistence with Firestore ---
+const saveData = async () => {
+    if (!currentUser) return;
+    try {
+        const userDocRef = db.collection('users').doc(currentUser.uid);
+        await userDocRef.set({
+            students: students,
+            payments: payments,
+            settings: {
+                STUDENT_FEE_PER_MONTH: STUDENT_FEE_PER_MONTH,
+                TOTAL_SEATS: TOTAL_SEATS
+            }
+        });
+        console.log('Data saved to Firestore');
+    } catch (error) {
+        console.error("Error saving data: ", error);
+        alert('Could not save data to the cloud.');
+    }
+};
+
+const loadData = async () => {
+    if (!currentUser) return;
+    try {
+        const userDocRef = db.collection('users').doc(currentUser.uid);
+        const doc = await userDocRef.get();
+
+        if (doc.exists) {
+            const data = doc.data();
+            students = data.students || [];
+            payments = data.payments || [];
+            STUDENT_FEE_PER_MONTH = data.settings?.STUDENT_FEE_PER_MONTH || 500;
+            TOTAL_SEATS = data.settings?.TOTAL_SEATS || 50;
+            console.log('Data loaded from Firestore');
+        } else {
+            console.log("No data found for this user. Using defaults.");
+            // First time user, save default data
+            await saveData();
+        }
+        // Once data is loaded, initialize the app
+        showSection('dashboard-section');
+    } catch (error) {
+        console.error("Error loading data: ", error);
+        alert('Could not load data from the cloud.');
+    }
+};
+
+// --- Logout Functionality ---
+document.getElementById('logout-button').addEventListener('click', () => {
+    auth.signOut().then(() => {
+        console.log('User signed out');
+        // The onAuthStateChanged listener will automatically redirect to login.html
+    }).catch(error => {
+        console.error('Sign out error', error);
+    });
+});
+
+
+// DOM Elements (The rest of your original script.js starts here)
 const allSections = document.querySelectorAll('main > section');
+// ... (rest of the variable declarations remain the same)
 const navButtons = document.querySelectorAll('nav button');
 const totalStudentsCard = document.getElementById('total-students-card');
 const studentForm = document.getElementById('student-form');
@@ -32,7 +121,7 @@ const reportYearInput = document.getElementById('report-year');
 const monthlyReportOutputDiv = document.getElementById('monthly-report-output');
 const defaultMonthlyFeeInput = document.getElementById('default-monthly-fee');
 const totalStudySeatsInput = document.getElementById('total-study-seats');
-const importDataFile = document.getElementById('import-data-file');
+// const importDataFile = document.getElementById('import-data-file'); // No longer needed
 const seatModal = document.getElementById('seat-allotment-modal');
 const modalSeatNumber = document.getElementById('modal-seat-number');
 const modalStudentSelect = document.getElementById('modal-student-select');
@@ -41,27 +130,14 @@ const modalStudentSelect = document.getElementById('modal-student-select');
 const formatDate = (date) => new Date(date).toISOString().split('T')[0];
 const getMonthName = (monthNum) => new Date(2000, monthNum - 1, 1).toLocaleString('en-us', { month: 'long' });
 
-// --- Data Persistence ---
-const saveData = () => {
-    localStorage.setItem('students', JSON.stringify(students));
-    localStorage.setItem('payments', JSON.stringify(payments));
-    localStorage.setItem('STUDENT_FEE_PER_MONTH', JSON.stringify(STUDENT_FEE_PER_MONTH));
-    localStorage.setItem('TOTAL_SEATS', JSON.stringify(TOTAL_SEATS));
-};
-const loadData = () => {
-    students = JSON.parse(localStorage.getItem('students')) || [];
-    payments = JSON.parse(localStorage.getItem('payments')) || [];
-    STUDENT_FEE_PER_MONTH = JSON.parse(localStorage.getItem('STUDENT_FEE_PER_MONTH')) || 500;
-    TOTAL_SEATS = JSON.parse(localStorage.getItem('TOTAL_SEATS')) || 50;
-};
 
-// --- Core App Logic (Updated Navigation) ---
+// --- Core App Logic (Unchanged for the most part) ---
 function showSection(sectionId) {
-    // Highlight active nav button
     navButtons.forEach(btn => {
-        btn.classList.toggle('nav-active', btn.getAttribute('onclick').includes(sectionId));
+        if (!btn.id.includes('logout')) {
+           btn.classList.toggle('nav-active', btn.getAttribute('onclick').includes(sectionId));
+        }
     });
-
     allSections.forEach(s => s.classList.remove('active'));
     document.getElementById(sectionId).classList.add('active');
     
@@ -87,17 +163,26 @@ function showSection(sectionId) {
     }
 }
 
-function updateDashboardStats() {
-    document.getElementById('total-students').textContent = students.length;
-    const occupiedSeats = students.filter(s => s.seat).length;
-    document.getElementById('occupied-seats').textContent = occupiedSeats;
-    document.getElementById('available-seats').textContent = TOTAL_SEATS - occupiedSeats;
-    const currentMonth = new Date().getMonth() + 1;
-    const collectedFees = payments
-        .filter(p => p.month === currentMonth && p.year === new Date().getFullYear() && p.attended)
-        .reduce((sum, p) => sum + p.amount, 0);
-    document.getElementById('this-month-collected-fees').textContent = `₹ ${collectedFees}`;
-}
+// All your other functions (updateDashboardStats, studentForm listener, etc.) remain exactly the same.
+// The only change is that whenever they call saveData(), it will now save to Firestore instead of localStorage.
+
+// --- REMOVED Data Import/Export ---
+// The old exportData and importDataFile listeners are removed as data is now managed in the cloud.
+
+// --- Initializer ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Hide the app body by default until authentication check is complete
+    document.querySelector('body').style.display = 'none';
+    
+    // Initializer logic is now handled by the onAuthStateChanged listener
+    totalStudentsCard.addEventListener('click', () => showSection('student-management-section'));
+});
+
+
+// PASTE THE REST OF YOUR ORIGINAL script.js FUNCTIONS HERE
+// (From updateDashboardStats() all the way to the end, but remove the old Initializer and import/export)
+// I have already copied most of them above for you. Just ensure everything is present.
+// The key is that the core logic of your app does not need to change, only the data layer.
 
 // --- Student Management ---
 studentForm.addEventListener('submit', (e) => {
@@ -161,6 +246,9 @@ function deleteStudent(id) {
         renderSeatLayout();
     }
 }
+
+// Fees Management, Seat Management, Reports, Settings functions go here...
+// (These are unchanged from your original file)
 
 // --- Fees Management ---
 feeStudentSelect.addEventListener('change', (e) => {
@@ -311,35 +399,14 @@ function saveSettings() {
     alert('Settings saved!');
 }
 
-// --- Data Import/Export ---
-function exportData() {
-    const dataStr = JSON.stringify({ students, payments, STUDENT_FEE_PER_MONTH, TOTAL_SEATS }, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `studypoint_backup_${formatDate(new Date())}.json`;
-    a.click();
+function updateDashboardStats() {
+    document.getElementById('total-students').textContent = students.length;
+    const occupiedSeats = students.filter(s => s.seat).length;
+    document.getElementById('occupied-seats').textContent = occupiedSeats;
+    document.getElementById('available-seats').textContent = TOTAL_SEATS - occupiedSeats;
+    const currentMonth = new Date().getMonth() + 1;
+    const collectedFees = payments
+        .filter(p => p.month === currentMonth && p.year === new Date().getFullYear() && p.attended)
+        .reduce((sum, p) => sum + p.amount, 0);
+    document.getElementById('this-month-collected-fees').textContent = `₹ ${collectedFees}`;
 }
-importDataFile.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file && confirm('This will overwrite all existing data. Continue?')) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const data = JSON.parse(event.target.result);
-            localStorage.setItem('students', JSON.stringify(data.students || []));
-            localStorage.setItem('payments', JSON.stringify(data.payments || []));
-            localStorage.setItem('STUDENT_FEE_PER_MONTH', JSON.stringify(data.STUDENT_FEE_PER_MONTH || 500));
-            localStorage.setItem('TOTAL_SEATS', JSON.stringify(data.TOTAL_SEATS || 50));
-            alert('Import successful! Reloading...');
-            location.reload();
-        };
-        reader.readAsText(file);
-    }
-});
-
-// --- Initializer ---
-document.addEventListener('DOMContentLoaded', () => {
-    loadData();
-    showSection('dashboard-section');
-    totalStudentsCard.addEventListener('click', () => showSection('student-management-section'));
-});
