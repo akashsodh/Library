@@ -1,6 +1,6 @@
 {
   "name": "Salasae Balaji Library",
-  "short_name": "Library Manager",
+  "short_name": "Balaji Library",
   "description": "A simple application to manage students, fees, and seats at a study point.",
   "start_url": "./login.html",
   "display": "standalone",
