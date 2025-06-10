@@ -245,3 +245,12 @@ table th { font-weight: 600; color: var(--text-light); font-size: 0.9rem; text-t
     font-size: 1.1rem; /* बटन का फॉन्ट साइज बढ़ाएं */
     padding: 12px 20px;
 }
+
+/* VIP स्टूडेंट की सीट के लिए गोल्ड स्टाइल */
+
+.seat.vip-seat,
+.seat.vip-seat:hover {
+    background-color: gold;
+    color: #333; /* गोल्ड रंग पर गहरा टेक्स्ट बेहतर दिखता है */
+    border-color: #DAA520; /* बॉर्डर के लिए गहरा सुनहरा रंग */
+}
